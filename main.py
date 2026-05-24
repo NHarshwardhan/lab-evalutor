@@ -188,7 +188,7 @@ export default LoginForm;
     try:
 
         response = client.chat.completions.create(
-            model="gpt-4.1-nano",
+            model="gpt-4.1-mini",
             temperature=0.7,
             messages=[
                 {
@@ -278,7 +278,7 @@ RULES
     try:
 
         response = client.chat.completions.create(
-            model="gpt-4.1-nano",
+            model="gpt-4.1-mini",
             temperature=0,
             messages=[
                 {
