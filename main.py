@@ -155,11 +155,9 @@ Allowed:
 - placeholders
 
 NOT allowed:
-- completed functions
 - business logic
 - final working code
 - full UI implementation
-
 - NOT be blank
 - match language/framework automatically
 
