@@ -141,7 +141,7 @@ RULES
 4. starter_template MUST:
 - contain realistic code
 - contain TODO sections
-- contain partial implementation
+
 - NOT be blank
 - match language/framework automatically
 
