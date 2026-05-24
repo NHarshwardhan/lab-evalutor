@@ -138,9 +138,27 @@ RULES
 
 3. Generate REAL coding tasks
 
-4. starter_template MUST:
-- contain realistic code
-- contain TODO sections
+4. starter_template RULE (VERY STRICT):
+
+- MUST be ONLY a starter scaffold
+- MUST contain structure only (boilerplate)
+- MUST include TODO comments for ALL logic
+- MUST NOT include full solution logic
+- MUST NOT contain final working implementation
+- MUST NOT solve the exercise
+
+Allowed:
+- empty functions
+- class structure
+- component skeleton
+- API route skeleton
+- placeholders
+
+NOT allowed:
+- completed functions
+- business logic
+- final working code
+- full UI implementation
 
 - NOT be blank
 - match language/framework automatically
@@ -188,7 +206,7 @@ export default LoginForm;
     try:
 
         response = client.chat.completions.create(
-            model="gpt-4.1-mini",
+            model="gpt-4.1-nano",
             temperature=0.7,
             messages=[
                 {
@@ -278,7 +296,7 @@ RULES
     try:
 
         response = client.chat.completions.create(
-            model="gpt-4.1-mini",
+            model="gpt-4.1-nano",
             temperature=0,
             messages=[
                 {
