@@ -98,6 +98,11 @@ async def generate_boilerplate(data: BoilerplateRequest):
     Only skeleton structure with TODO comments.
     """
 
+    # Format requirements for clarity
+    requirements_text = ""
+    for i, req in enumerate(data.requirements, 1):
+        requirements_text += f"{i}. {req}\n"
+
     prompt = f"""
 You are an expert software architect.
 
@@ -122,16 +127,16 @@ CRITICAL RULES:
 - Provide any code that shows the answer
 
 ========================================
-QUESTION
+QUESTION / EXERCISE
 ========================================
 
 {data.question}
 
 ========================================
-REQUIREMENTS
+REQUIREMENTS TO IMPLEMENT
 ========================================
 
-{json.dumps(data.requirements)}
+{requirements_text}
 
 ========================================
 FILE INFORMATION
@@ -161,13 +166,15 @@ REACT/JAVASCRIPT:
 import React from 'react';
 
 const ParentComponent = () => {{
-  // TODO: Create state
+  // TODO: Create state for the message
   
-  // TODO: Create event handler
+  // TODO: Create a handler function to update the message
+  
+  // TODO: Pass the message to the Child component as a prop
 
   return (
     <div>
-      {{/* TODO: Add child component and content */}}
+      {{/* TODO: Render the Child component with props */}}
     </div>
   );
 }};
@@ -177,35 +184,35 @@ export default ParentComponent;
 PYTHON:
 class Parent:
     def __init__(self):
-        # TODO: Initialize attributes
+        # TODO: Initialize message attribute
         pass
     
-    def process_data(self, data):
-        # TODO: Implement data processing
+    def send_message(self):
+        # TODO: Implement message sending logic
         pass
 
 JAVA:
 public class Parent {{
-    // TODO: Declare variables
+    // TODO: Declare message variable
     
     public Parent() {{
         // TODO: Constructor implementation
     }}
     
-    public void handleData(String data) {{
-        // TODO: Implement handler
+    public void sendMessage() {{
+        // TODO: Implement message logic
     }}
 }}
 
 C#:
 public class Parent {{
-    // TODO: Declare fields
+    // TODO: Declare message field
     
     public Parent() {{
         // TODO: Initialize
     }}
     
-    public void Process() {{
+    public void SendMessage() {{
         // TODO: Implement logic
     }}
 }}
@@ -263,7 +270,7 @@ Just clean skeleton structure with TODO marks.
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a senior software architect. Generate ONLY bare skeleton boilerplate code. NO examples. NO implementation hints. NO commented code showing solutions. Just empty structure with TODO comments."
+                    "content": "You are a senior software architect. Generate ONLY bare skeleton boilerplate code. NO examples. NO implementation hints. NO commented code showing solutions. Just empty structure with TODO comments. For component communication exercises, create empty component files with TODO comments for props, state, and handlers."
                 },
                 {
                     "role": "user",
@@ -543,10 +550,15 @@ async def evaluate(data: EvaluationRequest):
             }
         }
 
+    # Format requirements for clarity in evaluation
+    requirements_text = ""
+    for i, req in enumerate(data.requirements, 1):
+        requirements_text += f"{i}. {req}\n"
+
     prompt = f"""
 You are an expert senior code reviewer.
 
-Evaluate student code ONLY based on requirement completion.
+Evaluate student code STRICTLY based on requirement completion.
 
 ==================================================
 EXERCISE QUESTION
@@ -555,10 +567,10 @@ EXERCISE QUESTION
 {data.question}
 
 ==================================================
-REQUIREMENTS (Each must be completed)
+REQUIREMENTS TO CHECK (Each must be completed)
 ==================================================
 
-{json.dumps(data.requirements, indent=2)}
+{requirements_text}
 
 ==================================================
 LANGUAGE
@@ -573,44 +585,55 @@ STUDENT CODE TO EVALUATE
 {data.student_code}
 
 ==================================================
-EVALUATION RULES
+EVALUATION INSTRUCTIONS
 ==================================================
 
-IMPORTANT:
-1. Check if EACH requirement is fully implemented
-2. Each requirement should be checked independently
-3. If student implements ALL requirements correctly → Score is 10/10
-4. For EACH missing/incomplete requirement → deduct based on importance
-5. DO NOT penalize for:
-   - Code style or formatting
-   - Comments
-   - Variable naming
-   - Extra whitespace
-   - Optional optimizations
-6. ONLY penalize for:
-   - Missing required functionality
-   - Incomplete implementations
-   - Logic errors that break requirements
+STEP 1: Read requirements carefully
+- Understand exactly what EACH requirement asks for
+- Be specific about what counts as "implemented"
 
-Scoring Guide:
-- All requirements met correctly = 10/10
-- 1 minor requirement missing = 8-9/10
-- 2 minor requirements missing = 6-8/10
-- 1 major requirement missing = 5-7/10
-- 2+ major requirements missing = 0-5/10
+STEP 2: Analyze the student code
+- Check if the code exists and is not commented out
+- Verify if it actually implements the requirement
+- Look for functional implementation, not just structure
+
+STEP 3: Rate each requirement (✓ = Complete, ✗ = Missing/Incomplete)
+- ✓ Only if FULLY implemented and functional
+- ✗ If missing, incomplete, or non-functional
+
+STEP 4: Calculate score
+- Count how many requirements are ✓
+- If ALL requirements are ✓ → Score is 10/10
+- If some are ✗ → Deduct 2-3 points per missing major requirement, 1-2 per minor
+- Minimum score: 0, Maximum score: 10
+
+STEP 5: DO NOT PENALIZE for:
+- Code style or formatting (spacing, indentation)
+- Comments or lack thereof
+- Variable naming conventions
+- Extra whitespace or blank lines
+- Different coding approaches (as long as they work)
+- Minor syntax variations
+- Optional optimizations
+
+STEP 6: ONLY PENALIZE for:
+- Missing functionality from requirements
+- Incomplete or partially-implemented requirements
+- Code that doesn't work or has logic errors
+- Missing key components or methods
 
 ==================================================
-RETURN ONLY JSON (no markdown, no extra text)
+RETURN ONLY VALID JSON (no markdown, no extra text)
 ==================================================
 
 {{{{
-  "passed": true or false,
+  "passed": true or false (true only if score >= 8),
   "score": 0-10,
   "summary": "1-2 sentence overall evaluation",
   "feedback": [
-    "Requirement 1: ✓ or ✗ status",
-    "Requirement 2: ✓ or ✗ status",
-    "Strength or improvement area"
+    "Requirement 1: ✓ or ✗ with brief explanation",
+    "Requirement 2: ✓ or ✗ with brief explanation",
+    "Additional feedback on strengths or improvements needed"
   ]
 }}}}
 """
@@ -622,7 +645,7 @@ RETURN ONLY JSON (no markdown, no extra text)
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a senior code reviewer. Evaluate code strictly based on requirement completion. Return ONLY valid JSON."
+                    "content": "You are a strict but fair senior code reviewer. Evaluate code objectively based on requirement completion. Check if each requirement is ACTUALLY IMPLEMENTED, not just structured. Return ONLY valid JSON. Be precise about what is working and what is missing."
                 },
                 {
                     "role": "user",
