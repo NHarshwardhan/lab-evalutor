@@ -61,6 +61,7 @@ class EvaluationRequest(BaseModel):
     requirements: list[str]
     student_code: str
     language: str
+    steps: list[str] = []  # Optional: for aligned feedback
 
 
 # =========================================================
@@ -335,6 +336,46 @@ Return ONLY valid JSON.
 }}}}
 
 ==================================================
+ALIGNMENT RULE (MOST CRITICAL - READ FIRST)
+==================================================
+
+⚠️ STEPS, REQUIREMENTS, and BOILERPLATE MUST ALIGN
+
+Steps = WHAT student does (actions/tasks)
+Requirements = WHAT must be implemented (outcomes)
+Boilerplate TODOs = Specific code skeleton for each step
+
+RULE: For each step, create exactly one requirement.
+      For each step, create one TODO in the starter_template.
+
+EXAMPLE OF PROPER ALIGNMENT:
+
+Step 1: "Create a new Parent component file"
+→ Requirement 1: "Parent component file created"
+→ Boilerplate TODO: [Already provided - import React; const Parent = () => {...}]
+
+Step 2: "Add useState hook for message state"
+→ Requirement 2: "State variable created with useState"
+→ Boilerplate TODO: // TODO: Create state variable using useState
+
+Step 3: "Create handler to update the message"
+→ Requirement 3: "Event handler function implemented"
+→ Boilerplate TODO: // TODO: Create handler function
+
+Step 4: "Import Child component"
+→ Requirement 4: "Child component imported"
+→ Boilerplate TODO: // TODO: Import Child component
+
+Step 5: "Render Child with message prop"
+→ Requirement 5: "Child rendered with message prop passed"
+→ Boilerplate TODO: // TODO: Render Child component and pass message
+
+⚠️ FAILURE EXAMPLES (DO NOT DO THIS):
+✗ Step 1, 2, 3 but Requirement 1 about something from Step 5
+✗ Too many TODOs that don't match steps
+✗ Steps that don't have corresponding requirements
+
+==================================================
 RULES FOR ALL LANGUAGES
 ==================================================
 
@@ -507,7 +548,7 @@ Your job is ONLY the skeleton.
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a senior coding trainer. Generate boilerplate exercises with ONLY skeleton code. NO examples. NO implementation hints. NO commented code showing solutions. Just empty structure with TODO comments. Apply this to ALL languages consistently. CRITICAL: Every exercise MUST include 3-5 clear steps in the 'steps' array. Steps should guide students through what to do without revealing the solution."
+                    "content": "You are a senior coding trainer. CRITICAL: steps, requirements, and boilerplate TODOs MUST align perfectly. For each step, create exactly one matching requirement. For each requirement, create one TODO in starter_template. NO mismatches. NEVER create unaligned steps/requirements. Generate skeleton code only - NO examples, NO hints. Each TODO must correspond to exactly one step."
                 },
                 {
                     "role": "user",
@@ -550,21 +591,36 @@ async def evaluate(data: EvaluationRequest):
             }
         }
 
-    # Format requirements for clarity in evaluation
+    # Format requirements and steps for clarity in evaluation
     requirements_text = ""
     for i, req in enumerate(data.requirements, 1):
-        requirements_text += f"{i}. {req}\n"
+        step_ref = ""
+        if data.steps and i <= len(data.steps):
+            step_ref = f"\n   (This step: {data.steps[i-1]})"
+        requirements_text += f"{i}. {req}{step_ref}\n"
+
+    steps_text = ""
+    if data.steps:
+        steps_text = "\n==================================================\nSTEPS (What student should do)\n==================================================\n\n"
+        for i, step in enumerate(data.steps, 1):
+            steps_text += f"{i}. {step}\n"
 
     prompt = f"""
 You are an expert senior code reviewer.
 
 Evaluate student code STRICTLY based on requirement completion.
 
+These requirements are ALIGNED 1:1 with exercise steps.
+- Step 1 ↔ Requirement 1
+- Step 2 ↔ Requirement 2
+- etc.
+
 ==================================================
 EXERCISE QUESTION
 ==================================================
 
 {data.question}
+{steps_text}
 
 ==================================================
 REQUIREMENTS TO CHECK (Each must be completed)
@@ -588,8 +644,16 @@ STUDENT CODE TO EVALUATE
 EVALUATION INSTRUCTIONS
 ==================================================
 
+CRITICAL: Each requirement aligns with a step.
+Your feedback should reference BOTH the step and requirement.
+
+EXAMPLE:
+"Step 1 / Requirement 1: ✓ Parent component file created successfully"
+"Step 2 / Requirement 2: ✗ useState hook not implemented"
+
 STEP 1: Read requirements carefully
 - Understand exactly what EACH requirement asks for
+- Match it to the corresponding step
 - Be specific about what counts as "implemented"
 
 STEP 2: Analyze the student code
@@ -631,8 +695,9 @@ RETURN ONLY VALID JSON (no markdown, no extra text)
   "score": 0-10,
   "summary": "1-2 sentence overall evaluation",
   "feedback": [
-    "Requirement 1: ✓ or ✗ with brief explanation",
-    "Requirement 2: ✓ or ✗ with brief explanation",
+    "Step 1 / Requirement 1: ✓ or ✗ with brief explanation",
+    "Step 2 / Requirement 2: ✓ or ✗ with brief explanation",
+    "Step N / Requirement N: ✓ or ✗ with brief explanation",
     "Additional feedback on strengths or improvements needed"
   ]
 }}}}
