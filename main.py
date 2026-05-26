@@ -50,6 +50,11 @@ client = OpenAI(
 class TopicRequest(BaseModel):
     topic: str
 
+class BoilerplateRequest(BaseModel):
+    file_name: str
+    language: str
+    question: str
+    requirements: list[str]
 
 class EvaluationRequest(BaseModel):
     question: str
@@ -82,6 +87,86 @@ async def root():
         "message": "AI Lab Platform Running"
     }
 
+
+# =========================================================
+# GENERATE BOILERPLATE
+# =========================================================
+
+@app.post("/generate-boilerplate")
+async def generate_boilerplate(data: BoilerplateRequest):
+
+    prompt = f"""
+You are an expert software architect.
+
+Generate ONLY starter boilerplate code.
+
+========================================
+QUESTION
+========================================
+
+{data.question}
+
+========================================
+REQUIREMENTS
+========================================
+
+{json.dumps(data.requirements)}
+
+========================================
+FILE NAME
+========================================
+
+{data.file_name}
+
+========================================
+LANGUAGE
+========================================
+
+{data.language}
+
+========================================
+RULES
+========================================
+
+1. Generate ONLY starter structure
+2. Add TODO comments
+3. DO NOT implement final logic
+4. DO NOT solve the exercise
+5. Must match framework/language
+6. Must look enterprise-grade
+7. Return ONLY raw code
+"""
+
+    try:
+
+        response = client.chat.completions.create(
+            model="gpt-4.1-nano",
+            temperature=0.3,
+            messages=[
+                {
+                    "role":"system",
+                    "content":"You are a senior software architect."
+                },
+                {
+                    "role":"user",
+                    "content":prompt
+                }
+            ]
+        )
+
+        code = response.choices[0].message.content
+
+        return {
+            "success": True,
+            "code": code
+        }
+
+    except Exception as e:
+
+        return {
+            "success": False,
+            "error": str(e)
+        }
 
 # =========================================================
 # GENERATE LABS
@@ -158,6 +243,7 @@ NOT allowed:
 - business logic
 - final working code
 - full UI implementation
+
 - NOT be blank
 - match language/framework automatically
 
@@ -240,88 +326,97 @@ export default LoginForm;
 # =========================================================
 # EVALUATE
 # =========================================================
-
 @app.post("/evaluate")
 async def evaluate(data: EvaluationRequest):
 
-    prompt = f"""
-You are an expert coding evaluator.
+    if not data.student_code or data.student_code.strip() == "":
+        return {
+            "success": True,
+            "evaluation": {
+                "passed": False,
+                "score": 0,
+                "feedback": ["No code submitted"]
+            }
+        }
 
-QUESTION:
+    prompt = f"""
+Evaluate ONLY based on requirement completion.
+
+==================================================
+QUESTION
+==================================================
+
 {data.question}
 
-REQUIREMENTS:
+==================================================
+REQUIREMENTS
+==================================================
+
 {json.dumps(data.requirements)}
 
-LANGUAGE:
+==================================================
+LANGUAGE
+==================================================
+
 {data.language}
 
-STUDENT CODE:
+==================================================
+STUDENT CODE
+==================================================
+
 {data.student_code}
 
 ==================================================
-RETURN FORMAT
+EVALUATION RULES
 ==================================================
-
-Return ONLY valid JSON.
+Rules:
+- Each completed requirement gets equal weight.
+- If all requirements are completed correctly, score MUST be 10.
+- Do NOT deduct marks for comments, formatting, best practices, or optional improvements.
+- Suggestions should not reduce score.
+==================================================
+RETURN ONLY JSON
+==================================================
 
 {{
   "passed": true,
-  "score": 8,
-  "feedback":[
-    "Good state handling",
-    "Validation missing"
+  "score": 10,
+  "summary": "Short overall evaluation",
+  "feedback": [
+    "Issue 1",
+    "Issue 2",
+    "Good point"
   ]
 }}
-
-==================================================
-RULES
-==================================================
-
-1. Check:
-- syntax
-- logic
-- implementation
-- requirements
-
-2. Give realistic feedback
-
-3. Do not be overly strict
-
-4. Return ONLY RAW JSON
 """
 
     try:
-
         response = client.chat.completions.create(
             model="gpt-4.1-nano",
             temperature=0,
             messages=[
                 {
-                    "role":"system",
-                    "content":"You are a senior coding evaluator."
+                    "role": "system",
+                    "content": "You are a senior code reviewer providing evaluation feedback."
                 },
                 {
-                    "role":"user",
-                    "content":prompt
+                    "role": "user",
+                    "content": prompt
                 }
             ]
         )
 
         result = response.choices[0].message.content
-
         cleaned = clean_json(result)
-
         parsed = json.loads(cleaned)
 
         return {
-            "success":True,
-            "evaluation":parsed
+            "success": True,
+            "evaluation": parsed
         }
 
     except Exception as e:
-
         return {
-            "success":False,
-            "error":str(e)
+            "success": False,
+            "error": str(e)
         }
